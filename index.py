@@ -16,36 +16,20 @@ retry_config = types.HttpRetryOptions(
     http_status_codes=[429, 500, 503, 504]
 )
 
-data_collection_agent = Agent(
-    name="data_collection_assistant",
-    model=Gemini(
-        model="gemini-2.5-flash-lite",
-        retry_options=retry_config
-    ),
-    description="Agent to ensure all data is given from user request.",
-    instruction="You need to ensure all data is given from user request. To give proper law points we need to get a proper problem statement from user request such as incident date, time, location, victims, witnesses, and other relevant details. You can use Google Search to  know about the case requirements.",
-    tools=[google_search],
-)
-
-research_agent = Agent(
-    name="research_assistant",
-    model=Gemini(
-        model="gemini-2.5-flash-lite",
-        retry_options=retry_config
-    ),
-    description="A research assistant that can research law points.",
-    instruction="You are a research assistant.You will be given a question and you will need to research the law points and provide the answer. Use Google Search for all questions and prioritize the latest information.",
-    tools=[google_search],
-)
-
 root_agent = Agent(
-    name="helpful_assistant",
+    name="ai_advocate",
     model=Gemini(
         model="gemini-2.5-flash-lite",
         retry_options=retry_config
     ),
-    description="A simple agent that can answer general questions.",
-    instruction="You are a helpful assistant. Use Google Search for current info or if unsure.",
+    description="An AI legal advocate assistant that helps users understand their rights and provides legal information.",
+    instruction="""You are an AI legal advocate assistant. Your role is to:
+    1. Collect all necessary information from the user (incident date, time, location, victims, witnesses, etc.)
+    2. Research relevant legal information and rights using Google Search
+    3. Provide clear, helpful guidance about legal rights and options
+    
+    Always use Google Search to find the most current and relevant legal information.
+    Be empathetic and professional in your responses.""",
     tools=[google_search],
 )
 
@@ -53,7 +37,7 @@ runner = InMemoryRunner(agent=root_agent)
 
 async def main():
     response = await runner.run_debug(
-        "What is Agent Development Kit from Google? What languages is the SDK available in?"
+        "I got hit by a car and I want to know what my rights are."
     )
     print(response)
 
