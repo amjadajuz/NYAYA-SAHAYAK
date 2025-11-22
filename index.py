@@ -101,7 +101,7 @@ research_agent = Agent(
     
     When you find relevant legal text through search, you can use the search_similar_legal_text tool 
     to analyze it more deeply and extract the most relevant portions for the user's query.""",
-    tools=[google_search, FunctionTool(search_similar_legal_text)],
+    tools=[google_search, search_similar_legal_text],
     output_key="research_findings"
 )
 
