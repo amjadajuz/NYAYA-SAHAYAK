@@ -30,6 +30,44 @@ supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
 # root_agent = Agent(...)
 # runner = InMemoryRunner(agent=root_agent)
 
+# Assuming these are already defined correctly:
+# SUPABASE_URL = "YOUR_SUPABASE_URL"
+# SUPABASE_KEY = "YOUR_SUPABASE_ANON_KEY"
+
+
+def check_supabase_connection(url: str, key: str) -> bool:
+    """Attempts to connect to Supabase and perform a simple read operation."""
+    print("Attempting to verify Supabase connection...")
+    try:
+        supabase: Client = create_client(url, key)
+
+        # Attempt a simple, quick operation on the 'chat_sessions' table
+        # We limit to 1 row and select only the ID to minimize bandwidth.
+        response = supabase.table('chat_sessions').select(
+            'id').limit(1).execute()
+
+        # If the response is successful (no exception was raised), the connection works.
+        # The structure of the result confirms connectivity and valid credentials.
+        if response.data is not None:
+            print("✅ Supabase connection successful! Table operations are working.")
+            return True
+        else:
+            print("⚠️ Supabase connected, but query returned unexpected data.")
+            return False
+
+    except Exception as e:
+        print(f"❌ Supabase connection failed.")
+        print(f"Error details: {e}")
+        return False
+
+# Example usage in your main function (or before it):
+# if __name__ == "__main__":
+#     if check_supabase_connection(SUPABASE_URL, SUPABASE_KEY):
+#         asyncio.run(main())
+#     else:
+#         print("Aborting script due to database connection failure.")
+
+
 GOOGLE_API_KEY = "AIzaSyCwnyYWonWTPjJPmDByVhKeLqG6Kl4FVBw"
 os.environ["GOOGLE_API_KEY"] = GOOGLE_API_KEY
 
@@ -71,49 +109,63 @@ runner = InMemoryRunner(agent=root_agent)
 
 
 async def main():
-    # 1. Generate a unique session ID for this conversation
+    # ... Your existing Supabase and prompt setup ...
     session_id = str(uuid.uuid4())
-
     user_prompt = "I got hit by a car today(2025-11-21) at 10:00 AM on Main Street and I was hit by a car driven by John Doe. I was injured and I want to know what my rights are. There are two witnesses, Jane Doe and John Smith, who saw the incident. Police report says the car was driving at 50 mph in a 30 mph zone."
 
-    # 2. Store the User's Message
-    try:
-        supabase.table('chat_sessions').insert({
-            "session_id": session_id,
-            "role": "user",
-            "content": user_prompt,
-            "metadata": {}
-        }).execute()
-        print(f"User message saved to session: {session_id}")
-    except Exception as e:
-        print(f"Error saving user message to Supabase: {e}")
+    # 1. Store the User's Message (Ensure this uses the global 'supabase' client)
+    # ... (omitted for brevity, but keep your user message storage here) ...
 
-    # 3. Run the Agent
+    # 2. Run the Agent
     print("Running Agent...")
     response = await runner.run_debug(user_prompt)
 
-    # 4. Store the Agent's Response
-    advocate_response = response.get('research_findings', str(
-        response))  # Adjust key based on final output structure
+    # 3. Access the Agent's Final Output (The correct way to handle the Event list)
+    advocate_response = "Agent execution completed, but final response could not be extracted."
+    metadata = {}
 
-    # Extract metadata like the full trace or agent's thought process if needed
-    metadata = {
-        "full_trace": response  # Storing the entire run_debug output for rich context
-    }
+    if response and isinstance(response, list):
+        final_event = response[-1]
 
-    try:
-        supabase.table('chat_sessions').insert({
-            "session_id": session_id,
-            "role": "advocate",
-            "content": advocate_response,
-            "metadata": metadata
-        }).execute()
-        print(f"Advocate response saved to session: {session_id}")
-    except Exception as e:
-        print(f"Error saving advocate response to Supabase: {e}")
+        # Extract the final response text
+        if hasattr(final_event, 'content') and final_event.content.parts:
+            advocate_response = final_event.content.parts[0].text
 
-    # 5. Print the final response
-    print("\n--- Final Agent Response ---")
+        # Convert all events in the response list to a JSON-serializable format (dictionary)
+        # This is for the 'full_trace' metadata in Supabase
+        try:
+            metadata = {
+                "full_trace": [e.to_dict() for e in response]
+            }
+        except Exception as e:
+            # Fallback if to_dict() fails for some reason
+            metadata = {"full_trace_error": str(
+                e), "raw_response_type": str(type(response))}
+
+        # 4. Store the Advocate's Response (Supabase logic)
+        try:
+            # Use the extracted text and serializable metadata
+            supabase.table('chat_sessions').insert({
+                "session_id": session_id,
+                "role": "advocate",
+                "content": advocate_response,
+                "metadata": metadata
+            }).execute()
+            print(
+                f"✅ Advocate response saved to Supabase session: {session_id}")
+        except Exception as e:
+            print(f"❌ Error saving advocate response to Supabase: {e}")
+
+        # 5. Print the final response only if you want it printed again
+        print("\n--- Final Agent Response (Printed from extracted content) ---")
+        print(advocate_response)
+
+    else:
+        # This block will now rarely execute if the runner succeeds
+        print("Error: Agent runner returned an unexpected or empty result.")
+        print(f"Raw Response: {response}")
+
+# ... (rest of your script)
 
 if __name__ == "__main__":
     asyncio.run(main())
