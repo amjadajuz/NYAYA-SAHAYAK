@@ -1,149 +1,116 @@
 """
 Legal BERT Tool for semantic analysis of Indian legal text.
-Uses the law-ai/InLegalBERT model for embeddings and similarity matching.
+This version uses the Hugging Face Inference API instead of a local model.
 """
 
-from transformers import AutoTokenizer, AutoModel
-import torch
-from typing import List, Dict
+import os
+import requests
 import numpy as np
+from typing import List, Dict, Any
 
-# Global variables to cache the model and tokenizer
-_model = None
-_tokenizer = None
-
-
-def _load_model():
-    """Load the InLegalBERT model and tokenizer (cached after first load)"""
-    global _model, _tokenizer
-    
-    if _model is None or _tokenizer is None:
-        print("Loading InLegalBERT model...")
-        _tokenizer = AutoTokenizer.from_pretrained("law-ai/InLegalBERT")
-        _model = AutoModel.from_pretrained("law-ai/InLegalBERT")
-        _model.eval()  # Set to evaluation mode
-        print("✅ InLegalBERT model loaded successfully.")
-    
-    return _model, _tokenizer
+# --- Hugging Face API Configuration ---
+API_URL = "https://api-inference.huggingface.co/pipeline/feature-extraction/law-ai/InLegalBERT"
+HF_TOKEN = os.getenv("HF_TOKEN")
+# ------------------------------------
 
 
-def get_legal_text_embedding(text: str) -> np.ndarray:
+def get_legal_text_embeddings_from_api(texts: List[str]) -> np.ndarray:
     """
-    Get embedding representation for a piece of legal text using InLegalBERT.
-    
+    Generates embeddings for a list of legal texts using the Hugging Face Inference API.
+
     Args:
-        text: The legal text to encode
-        
+        texts: A list of strings to be embedded.
+
     Returns:
-        numpy array representing the text embedding
+        A numpy array of embeddings.
     """
-    model, tokenizer = _load_model()
+    if not HF_TOKEN:
+        raise ValueError("Hugging Face API token not found. Please set HF_TOKEN in your .env file.")
+
+    headers = {"Authorization": f"Bearer {HF_TOKEN}"}
+    payload = {
+        "inputs": texts,
+        "options": {"wait_for_model": True}  # Handles cold starts on the API
+    }
+
+    response = requests.post(API_URL, headers=headers, json=payload)
     
-    # Tokenize and encode the text
-    encoded_input = tokenizer(text, return_tensors="pt", truncation=True, max_length=512, padding=True)
-    
-    # Generate embeddings
-    with torch.no_grad():
-        output = model(**encoded_input)
-        # Use mean pooling of last hidden state as the sentence embedding
-        embeddings = output.last_hidden_state.mean(dim=1).squeeze().numpy()
-    
-    return embeddings
+    if response.status_code != 200:
+        raise Exception(f"Hugging Face API request failed with status {response.status_code}: {response.text}")
+
+    embeddings = response.json()
+    if not isinstance(embeddings, list):
+        raise TypeError(f"API returned an unexpected type. Expected a list of embeddings, but got: {type(embeddings)}")
+        
+    return np.array(embeddings)
 
 
-def analyze_legal_text_similarity(query: str, legal_texts: List[str]) -> str:
+def analyze_legal_text_similarity(query: str, context_sections: List[str]) -> List[Dict[str, Any]]:
     """
-    Analyze similarity between a query and multiple legal texts using InLegalBERT.
-    Returns the most relevant legal text based on semantic similarity.
+    Analyzes the semantic similarity between a query and a list of context sections
+    using embeddings from the Hugging Face API.
+    """
+    if not context_sections:
+        return []
+
+    # Combine query and contexts for a single, efficient API call
+    all_texts = [query] + context_sections
+    all_embeddings = get_legal_text_embeddings_from_api(all_texts)
+
+    query_embedding = all_embeddings[0]
+    context_embeddings = all_embeddings[1:]
+
+    # Calculate cosine similarity
+    dot_products = np.dot(context_embeddings, query_embedding)
+    query_norm = np.linalg.norm(query_embedding)
+    context_norms = np.linalg.norm(context_embeddings, axis=1)
     
+    # Avoid division by zero if an embedding is all zeros
+    if query_norm == 0 or np.any(context_norms == 0):
+        similarities = np.zeros(len(context_sections))
+    else:
+        similarities = dot_products / (query_norm * context_norms)
+
+    results = [
+        {"section": section, "similarity": float(sim)}
+        for section, sim in zip(context_sections, similarities)
+    ]
+    return results
+
+
+def search_similar_legal_text(query: str, legal_context: str) -> str:
+    """
+    A tool to find the most semantically similar section of a legal text to a given query.
+    This tool is ideal for analyzing a document found via search to extract the most relevant part.
+
     Args:
-        query: The legal question or text to search for
-        legal_texts: List of legal document texts to compare against
-        
+        query: The user's question or the point to research.
+        legal_context: The full legal text or document to be analyzed.
+
     Returns:
-        A string with the most relevant legal text and similarity score
+        The most relevant section from the legal_context, along with its similarity score.
     """
-    if not legal_texts:
-        return "Error: No legal texts provided for comparison."
-    
-    model, tokenizer = _load_model()
-    
-    # Get query embedding
-    query_embedding = get_legal_text_embedding(query)
-    
-    # Calculate similarity scores for each legal text
-    similarities = []
-    for text in legal_texts:
-        text_embedding = get_legal_text_embedding(text)
-        
-        # Calculate cosine similarity
-        similarity = np.dot(query_embedding, text_embedding) / (
-            np.linalg.norm(query_embedding) * np.linalg.norm(text_embedding)
-        )
-        similarities.append(similarity)
-    
-    # Find the most similar text
-    best_idx = np.argmax(similarities)
-    best_score = similarities[best_idx]
-    best_text = legal_texts[best_idx]
-    
-    result = f"Most relevant legal text (similarity: {best_score:.4f}):\n\n{best_text}"
-    return result
+    if not legal_context:
+        return "Error: No legal context was provided to analyze."
 
+    # Split the context into paragraphs or sections for granular analysis
+    context_sections = [p.strip() for p in legal_context.split('\n\n') if p.strip()]
+    if not context_sections:
+        return "Error: The provided legal context is empty or badly formatted."
 
-def extract_legal_concepts(text: str) -> str:
-    """
-    Extract legal concept embeddings from text using InLegalBERT.
-    This can be used to understand the legal concepts present in a document.
-    
-    Args:
-        text: The legal text to analyze
-        
-    Returns:
-        A string describing the embedding characteristics
-    """
-    embedding = get_legal_text_embedding(text)
-    
-    result = f"""Legal Text Analysis using InLegalBERT:
-- Text length: {len(text)} characters
-- Embedding dimension: {len(embedding)}
-- Embedding norm: {np.linalg.norm(embedding):.4f}
-- Top 5 strongest features: {np.argsort(embedding)[-5:][::-1].tolist()}
+    try:
+        similarity_results = analyze_legal_text_similarity(query, context_sections)
+    except Exception as e:
+        return f"Error during API-based similarity analysis: {e}"
 
-This embedding can be used for:
-1. Semantic similarity comparison with other legal texts
-2. Legal document classification
-3. Finding similar case laws
-4. Identifying relevant legal statutes
-"""
-    return result
+    if not similarity_results:
+        return "Could not find any relevant sections in the provided text."
 
+    # Find the best match from the results
+    best_match = max(similarity_results, key=lambda x: x['similarity'])
 
-# Simple wrapper function for use as an agent tool
-def search_similar_legal_text(query: str, context: str) -> str:
-    """
-    Search for relevant information in legal text using semantic similarity.
-    
-    This tool uses InLegalBERT (trained on Indian legal corpus) to understand
-    the semantic meaning of legal text and find the most relevant parts.
-    
-    Args:
-        query: The legal question or search query
-        context: Legal text or document to search within (can contain multiple
-                paragraphs separated by newlines)
-        
-    Returns:
-        The most relevant portion of the legal text based on semantic similarity
-    """
-    if not context:
-        return "Error: No legal context provided to search."
-    
-    # Split context into paragraphs or sections
-    sections = [s.strip() for s in context.split('\n\n') if s.strip()]
-    
-    if len(sections) == 1:
-        # If only one section, just analyze it
-        return extract_legal_concepts(sections[0])
-    
-    # If multiple sections, find most similar
-    return analyze_legal_text_similarity(query, sections)
+    return (
+        f"Most Relevant Section (Similarity: {best_match['similarity']:.2f}):\n"
+        f"--- \n"
+        f"{best_match['section']}"
+    )
