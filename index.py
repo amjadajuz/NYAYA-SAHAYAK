@@ -3,7 +3,7 @@ import asyncio
 from google.adk.agents import Agent
 from google.adk.models.google_llm import Gemini
 from google.adk.runners import InMemoryRunner
-from google.adk.tools import AgentTool, google_search
+from google.adk.tools import AgentTool, google_search, FunctionTool
 from google.genai import types
 from dotenv import load_dotenv
 
@@ -11,6 +11,10 @@ from dotenv import load_dotenv
 from supabase import create_client, Client
 import uuid  # For generating a unique session ID
 # ------------------------
+
+# --- Legal BERT Tool Import ---
+from legal_bert_tool import search_similar_legal_text
+# -------------------------------
 
 # Load environment variables from .env file
 load_dotenv()
@@ -89,9 +93,15 @@ research_agent = Agent(
         model="gemini-2.5-flash-lite",
         retry_options=retry_config
     ),
-    description="A research assistant that can research law points.",
-    instruction="You are a research assistant. You will be given a question and you will need to research the law points using google search and provide the answer. Prioritize the latest legal information.",
-    tools=[google_search],
+    description="A research assistant that can research law points and analyze legal texts using InLegalBERT.",
+    instruction="""You are a research assistant specialized in Indian law. You can:
+    1. Research law points using google search and provide the latest legal information
+    2. Analyze legal texts semantically using the InLegalBERT model (trained on Indian legal corpus)
+    3. Find similarities between legal documents and queries
+    
+    When you find relevant legal text through search, you can use the search_similar_legal_text tool 
+    to analyze it more deeply and extract the most relevant portions for the user's query.""",
+    tools=[google_search, FunctionTool(search_similar_legal_text)],
     output_key="research_findings"
 )
 
