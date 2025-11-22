@@ -32,17 +32,6 @@ SUPABASE_KEY = os.getenv("SUPABASE_KEY")  # Load from environment variable
 # Initialize Supabase client
 supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
 
-# ... (Existing Agent and Runner definitions) ...
-
-# Assuming your setup remains the same:
-# research_agent = Agent(...)
-# root_agent = Agent(...)
-# runner = InMemoryRunner(agent=root_agent)
-
-# Assuming these are already defined correctly:
-# SUPABASE_URL = "YOUR_SUPABASE_URL"
-# SUPABASE_KEY = "YOUR_SUPABASE_ANON_KEY"
-
 
 def check_supabase_connection(url: str, key: str) -> bool:
     """Attempts to connect to Supabase and perform a simple read operation."""
@@ -69,16 +58,8 @@ def check_supabase_connection(url: str, key: str) -> bool:
         print(f"Error details: {e}")
         return False
 
-# Example usage in your main function (or before it):
-# if __name__ == "__main__":
-#     if check_supabase_connection(SUPABASE_URL, SUPABASE_KEY):
-#         asyncio.run(main())
-#     else:
-#         print("Aborting script due to database connection failure.")
-
 
 GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY")
-os.environ["GOOGLE_API_KEY"] = GOOGLE_API_KEY
 
 retry_config = types.HttpRetryOptions(
     attempts=5,
@@ -87,12 +68,14 @@ retry_config = types.HttpRetryOptions(
     http_status_codes=[429, 500, 503, 504]
 )
 
+llm_model = Gemini(
+    model="gemini-2.5-flash-lite",
+    retry_options=retry_config
+)
+
 research_agent = Agent(
     name="research_assistant",
-    model=Gemini(
-        model="gemini-2.5-flash-lite",
-        retry_options=retry_config
-    ),
+    model=llm_model,
     description="A research assistant that can research law points and analyze legal texts using InLegalBERT.",
     instruction="""You are a research assistant specialized in Indian law. You can:
     1. Research law points using google search and provide the latest legal information
@@ -107,10 +90,7 @@ research_agent = Agent(
 
 root_agent = Agent(
     name="ai_advocate",
-    model=Gemini(
-        model="gemini-2.5-flash-lite",
-        retry_options=retry_config
-    ),
+    model=llm_model,
     description="An AI legal advocate assistant that helps users understand their rights and provides legal information.",
     instruction="""You are an AI legal advocate assistant. Your role is to:
     1. Collect all necessary information from the user (incident date, time, location, victims, witnesses, etc.)
