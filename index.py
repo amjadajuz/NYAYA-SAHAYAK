@@ -5,11 +5,16 @@ from google.adk.models.google_llm import Gemini
 from google.adk.runners import InMemoryRunner
 from google.adk.tools import AgentTool, google_search
 from google.genai import types
+from dotenv import load_dotenv
 
 # --- Supabase Imports ---
 from supabase import create_client, Client
 import uuid  # For generating a unique session ID
 # ------------------------
+
+# Load environment variables from .env file
+load_dotenv()
+
 
 # Your existing ADK setup (API Key, Retry Config, Agents, Runner) goes here
 # ...
@@ -17,7 +22,7 @@ import uuid  # For generating a unique session ID
 # --- Supabase Configuration ---
 # e.g., "https://xyz.supabase.co"
 SUPABASE_URL = "https://slwakayleeoatjunvwoy.supabase.co"
-SUPABASE_KEY = "sb_publishable_ibch9WmO4qC3m74tyKtBkg_MfH4Y75Q"  # e.g., "eyJhbGciOi..."
+SUPABASE_KEY = os.getenv("SUPABASE_KEY")  # Load from environment variable
 # ------------------------------
 
 # Initialize Supabase client
@@ -68,7 +73,7 @@ def check_supabase_connection(url: str, key: str) -> bool:
 #         print("Aborting script due to database connection failure.")
 
 
-GOOGLE_API_KEY = "AIzaSyCwnyYWonWTPjJPmDByVhKeLqG6Kl4FVBw"
+GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY")
 os.environ["GOOGLE_API_KEY"] = GOOGLE_API_KEY
 
 retry_config = types.HttpRetryOptions(
