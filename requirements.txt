@@ -107,6 +107,7 @@ sqlparse==0.5.3
 sse-starlette==3.0.3
 starlette==0.48.0
 storage3==2.24.0
+streamlit==1.29.0
 StrEnum==0.4.15
 supabase==2.24.0
 supabase-auth==2.24.0
