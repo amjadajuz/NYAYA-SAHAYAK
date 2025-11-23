@@ -100,7 +100,11 @@ root_agent = Agent(
     tools=[AgentTool(agent=research_agent)],
 )
 
-runner = InMemoryRunner(agent=root_agent)
+
+def get_runner():
+    """Creates a fresh runner instance for every request."""
+    # We recreate the runner so it attaches to the new Streamlit event loop
+    return InMemoryRunner(agent=root_agent)
 
 
 async def main():
@@ -112,8 +116,9 @@ async def main():
     # ... (omitted for brevity, but keep your user message storage here) ...
 
     # 2. Run the Agent
+    local_runner = get_runner()
     print("Running Agent...")
-    response = await runner.run_debug(user_prompt)
+    response = await local_runner.run_debug(user_prompt)
 
     # 3. Access the Agent's Final Output (The correct way to handle the Event list)
     advocate_response = "Agent execution completed, but final response could not be extracted."

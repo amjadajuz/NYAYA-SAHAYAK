@@ -1,89 +1,81 @@
+from agent import get_runner, supabase
 import streamlit as st
 import asyncio
 import uuid
-import json
+import nest_asyncio
 
-# Import your existing setup
-# Ensure your agent file is named 'agent.py'
-from agent import runner, supabase
+# 1. APPLY THE PATCH IMMEDIATELY
+nest_asyncio.apply()
+
+# 2. Import the FUNCTION, not the runner variable
+# Ensure agent.py has the get_runner function we created in Step 1
 
 st.set_page_config(page_title="Nyaya Sahayak AI", layout="wide")
-
 st.title("⚖️ Nyaya Sahayak: AI Legal Advocate")
-st.caption("Powered by Google Gemini & InLegalBERT")
 
-# Initialize Chat History in Session State
 if "messages" not in st.session_state:
     st.session_state.messages = []
 
-# Initialize Session ID
 if "session_id" not in st.session_state:
     st.session_state.session_id = str(uuid.uuid4())
 
-# Display Chat History
 for message in st.session_state.messages:
     with st.chat_message(message["role"]):
         st.markdown(message["content"])
         if "trace" in message and message["trace"]:
-            with st.expander("🛠️ View Agent Trace (Debug)"):
+            with st.expander("🛠️ View Agent Trace"):
                 st.json(message["trace"])
 
-# Handling User Input
 if prompt := st.chat_input("Describe your legal situation..."):
-    # 1. Display User Message
     st.session_state.messages.append({"role": "user", "content": prompt})
     with st.chat_message("user"):
         st.markdown(prompt)
 
-    # 2. Run Agent (Async Wrapper)
     with st.chat_message("assistant"):
-        message_placeholder = st.empty()
-        message_placeholder.markdown(
-            "⏳ *Analyzing legal precedents and researching...*")
+        placeholder = st.empty()
+        placeholder.markdown("⏳ *Analyzing...*")
 
         try:
-            # We use asyncio.run to execute the async ADK runner within Streamlit
-            response = asyncio.run(runner.run_debug(prompt))
+            # 3. GET A FRESH RUNNER INSTANCE
+            # This creates the runner inside the current active loop
+            current_runner = get_runner()
 
-            # 3. Extract Response & Trace
+            # 4. RUN STANDARD ASYNCIO
+            # Because we have nest_asyncio applied and a fresh runner,
+            # simple asyncio.run() works best now.
+            response = asyncio.run(current_runner.run_debug(prompt))
+
+            # Extract Response
             advocate_response = "I couldn't generate a response."
             full_trace = []
 
             if response and isinstance(response, list):
                 final_event = response[-1]
-                # Extract text
                 if hasattr(final_event, 'content') and final_event.content.parts:
                     advocate_response = final_event.content.parts[0].text
-
-                # Extract trace for debugging
                 try:
                     full_trace = [e.to_dict() for e in response]
                 except:
-                    full_trace = ["Could not serialize trace"]
+                    full_trace = ["Trace Error"]
 
-            # 4. Display Assistant Response
-            message_placeholder.markdown(advocate_response)
+            placeholder.markdown(advocate_response)
 
             if full_trace:
-                with st.expander("🛠️ View Agent Trace (Debug)"):
+                with st.expander("🛠️ View Agent Trace"):
                     st.json(full_trace)
 
-            # 5. Save to Supabase (Preserving your logic)
+            # Save to Supabase
             if supabase:
                 try:
-                    metadata = {"full_trace": full_trace}
                     supabase.table('chat_sessions').insert({
                         "session_id": st.session_state.session_id,
                         "role": "advocate",
                         "content": advocate_response,
-                        "metadata": metadata
+                        "metadata": {"full_trace": full_trace}
                     }).execute()
-                    # Optional: Show a small success toast
-                    st.toast(f"✅ Saved to Supabase", icon="💾")
-                except Exception as e:
-                    st.error(f"❌ Failed to save to Supabase: {e}")
+                except Exception as db_e:
+                    print(f"DB Error: {db_e}")
 
-            # Update Chat History
             st.session_state.messages.append({
                 "role": "assistant",
                 "content": advocate_response,
@@ -91,4 +83,4 @@ if prompt := st.chat_input("Describe your legal situation..."):
             })
 
         except Exception as e:
-            st.error(f"An error occurred: {e}")
+            st.error(f"Error: {e}")
