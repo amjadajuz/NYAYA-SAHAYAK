@@ -13,7 +13,7 @@ An AI-powered legal advocate that helps users understand their rights and provid
 
 1. Make sure you have the required dependencies installed:
 ```bash
-pip install google-genai google-adk
+pip install -r requirements.txt
 ```
 
 2. The API key is already configured in `index.py`
@@ -23,16 +23,16 @@ pip install google-genai google-adk
 ### Option 1: Command Line Interface
 Run the agent directly from the command line:
 ```bash
-python3 index.py
+python3 agent.py
 ```
 
 ### Option 2: Web UI (Recommended)
 Start the interactive web UI:
 ```bash
-adk web --agent root_agent --port 8000
+streamlit run app.py
 ```
 
-Then open your browser to: `http://localhost:8000`
+Then open your browser to: `http://localhost:8501`
 
 **Note:** The web UI command will run indefinitely. Press `Ctrl+C` to stop it.
 
