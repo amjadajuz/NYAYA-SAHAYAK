@@ -69,7 +69,7 @@ retry_config = types.HttpRetryOptions(
 )
 
 llm_model = Gemini(
-    model="gemini-2.5-flash-lite",
+    model="gemini-2.5-flash",
     retry_options=retry_config
 )
 
@@ -104,6 +104,7 @@ root_agent = Agent(
 def get_runner():
     """Creates a fresh runner instance for every request."""
     # We recreate the runner so it attaches to the new Streamlit event loop
+
     return InMemoryRunner(agent=root_agent)
 
 
