@@ -79,12 +79,8 @@ research_agent = Agent(
     description="A research assistant that can research law points and analyze legal texts using InLegalBERT.",
     instruction="""You are a research assistant specialized in Indian law. You can:
     1. Research law points using google search and provide the latest legal information
-    2. Analyze legal texts semantically using the InLegalBERT model (trained on Indian legal corpus)
-    3. Find similarities between legal documents and queries
-    
-    When you find relevant legal text through search, you can use the search_similar_legal_text tool 
-    to analyze it more deeply and extract the most relevant portions for the user's query.""",
-    tools=[google_search, search_similar_legal_text],
+    """,
+    tools=[google_search],
     output_key="research_findings"
 )
 
