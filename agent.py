@@ -1,6 +1,6 @@
 import os
 import asyncio
-from google.adk.agents import Agent
+from google.adk.agents import Agent, SequentialAgent
 from google.adk.models.google_llm import Gemini
 from google.adk.runners import InMemoryRunner
 from google.adk.tools import AgentTool, google_search, FunctionTool
@@ -77,27 +77,30 @@ research_agent = Agent(
     name="research_assistant",
     model=llm_model,
     description="A research assistant that can research law points and analyze legal texts using InLegalBERT.",
-    instruction="""You are a research assistant specialized in Indian law. You can:
-    1. Research law points using google search and provide the latest legal information
-    2. Analyze legal texts semantically using the InLegalBERT model (trained on Indian legal corpus)
-    3. Find similarities between legal documents and queries
+    instruction="""You are a research assistant specialized in Indian law. You have received the extracted factual data and initial legal information from the previous step. Use this context to:
+    1. Analyze legal texts semantically using the InLegalBERT model (trained on Indian legal corpus)
+    2. Find similarities between legal documents and queries
     
     When you find relevant legal text through search, you can use the search_similar_legal_text tool 
     to analyze it more deeply and extract the most relevant portions for the user's query.""",
-    tools=[google_search, search_similar_legal_text],
+    tools=[search_similar_legal_text],
     output_key="research_findings"
 )
 
-root_agent = Agent(
-    name="ai_advocate",
+data_checker_agent = Agent(
+    name="data_checker",
     model=llm_model,
-    description="An AI legal advocate assistant that helps users understand their rights and provides legal information.",
+    description="An agent that collects necessary client information for legal advocacy.",
     instruction="""You are an AI legal advocate assistant. Your role is to:
     1. Collect all necessary information from the user (incident date, time, location, victims, witnesses, etc.)
-    2. Research relevant legal information and rights using the research_agent
-    3. Provide clear, helpful guidance about legal rights and options based on the research_findings
     """,
+    output_key="client_data",
     tools=[AgentTool(agent=research_agent)],
+)
+
+root_agent = SequentialAgent(
+    name="ai_advocate",
+    sub_agents=[data_checker_agent, research_agent],
 )
 
 

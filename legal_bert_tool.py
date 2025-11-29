@@ -25,7 +25,8 @@ def get_legal_text_embeddings_from_api(texts: List[str]) -> np.ndarray:
         A numpy array of embeddings.
     """
     if not HF_TOKEN:
-        raise ValueError("Hugging Face API token not found. Please set HF_TOKEN in your .env file.")
+        raise ValueError(
+            "Hugging Face API token not found. Please set HF_TOKEN in your .env file.")
 
     headers = {"Authorization": f"Bearer {HF_TOKEN}"}
     payload = {
@@ -34,14 +35,16 @@ def get_legal_text_embeddings_from_api(texts: List[str]) -> np.ndarray:
     }
 
     response = requests.post(API_URL, headers=headers, json=payload)
-    
+
     if response.status_code != 200:
-        raise Exception(f"Hugging Face API request failed with status {response.status_code}: {response.text}")
+        raise Exception(
+            f"Hugging Face API request failed with status {response.status_code}: {response.text}")
 
     embeddings = response.json()
     if not isinstance(embeddings, list):
-        raise TypeError(f"API returned an unexpected type. Expected a list of embeddings, but got: {type(embeddings)}")
-        
+        raise TypeError(
+            f"API returned an unexpected type. Expected a list of embeddings, but got: {type(embeddings)}")
+
     return np.array(embeddings)
 
 
@@ -64,7 +67,7 @@ def analyze_legal_text_similarity(query: str, context_sections: List[str]) -> Li
     dot_products = np.dot(context_embeddings, query_embedding)
     query_norm = np.linalg.norm(query_embedding)
     context_norms = np.linalg.norm(context_embeddings, axis=1)
-    
+
     # Avoid division by zero if an embedding is all zeros
     if query_norm == 0 or np.any(context_norms == 0):
         similarities = np.zeros(len(context_sections))
@@ -94,12 +97,14 @@ def search_similar_legal_text(query: str, legal_context: str) -> str:
         return "Error: No legal context was provided to analyze."
 
     # Split the context into paragraphs or sections for granular analysis
-    context_sections = [p.strip() for p in legal_context.split('\n\n') if p.strip()]
+    context_sections = [p.strip()
+                        for p in legal_context.split('\n\n') if p.strip()]
     if not context_sections:
         return "Error: The provided legal context is empty or badly formatted."
 
     try:
-        similarity_results = analyze_legal_text_similarity(query, context_sections)
+        similarity_results = analyze_legal_text_similarity(
+            query, context_sections)
     except Exception as e:
         return f"Error during API-based similarity analysis: {e}"
 
@@ -114,3 +119,4 @@ def search_similar_legal_text(query: str, legal_context: str) -> str:
         f"--- \n"
         f"{best_match['section']}"
     )
+    pass
