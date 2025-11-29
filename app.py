@@ -36,14 +36,35 @@ if prompt := st.chat_input("Describe your legal situation..."):
         placeholder.markdown("⏳ *Analyzing...*")
 
         try:
-            # 3. GET A FRESH RUNNER INSTANCE
-            # This creates the runner inside the current active loop
+            # 1. Get the runner (No arguments needed now)
             current_runner = get_runner()
 
-            # 4. RUN STANDARD ASYNCIO
-            # Because we have nest_asyncio applied and a fresh runner,
-            # simple asyncio.run() works best now.
-            response = asyncio.run(current_runner.run_debug(prompt))
+            # 2. Format the Previous History manually
+            history_context = "PREVIOUS CONVERSATION HISTORY:\n"
+            for msg in st.session_state.messages:
+                # content might be a string or a complex object, handle strictly as string
+                content_str = str(msg.get("content", ""))
+                role = "User" if msg["role"] == "user" else "Advocate"
+                history_context += f"{role}: {content_str}\n"
+
+            # 3. Create the Combined Prompt
+            full_prompt = f"""
+            {history_context}
+            
+            ----------------
+            CURRENT USER QUERY:
+            {prompt}
+            
+            INSTRUCTIONS:
+            Answer the Current User Query taking into account the context 
+            from the Previous Conversation History provided above.
+            """
+
+            # 4. Run with the Full Prompt
+            # Since we manually added history, the agent now "remembers"
+            response = asyncio.run(current_runner.run_debug(full_prompt))
+
+            # ... (Rest of your code for handling response) ...
 
             # Extract Response
             advocate_response = "I couldn't generate a response."
