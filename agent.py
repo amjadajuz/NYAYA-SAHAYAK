@@ -130,8 +130,6 @@ data_checker_agent = Agent(
     You: Thank you for providing such a detailed account of your situation. It is very helpful. You've given me all the initial facts I need. I will now forward this information to our research assistant who will look into the specific legal aspects of your case, including your rights under the Indian Contract Act and the relevant limitation periods.
 """,
     output_key="client_data",
-    # Confused if this is needed. Working without it currently.
-    # tools=[AgentTool(agent=research_agent)],
 )
 
 root_agent = SequentialAgent(
