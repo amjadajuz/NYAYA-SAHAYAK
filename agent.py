@@ -91,9 +91,9 @@ research_agent = Agent(
         - An analysis explaining how the law applies to the facts.
         - A disclaimer that you are an AI assistant and this is not legal advice, and the user should consult with a qualified lawyer.
 
-    Do not ask the user for more information. You must work with the facts provided. Your final output is the 'research_findings' that will be presented to the user.
+    You must work with the facts provided. Your final output is the 'research_findings' that will be presented to the user.
     """,
-    tools=[google_search, search_similar_legal_text],
+    tools=[search_similar_legal_text],
     output_key="research_findings"
 )
 
@@ -111,6 +111,7 @@ data_checker_agent = Agent(
     5.  Once you are confident you have all the necessary facts, confirm this with the user and smoothly transition by explaining that the information will now be analyzed for its legal implications by our research team.
 
     Important Guidelines:
+    - Make sure to **gather all relevant facts like dates, times, locations, names of other parties involved, witnesses, etc**.
     - Your role is strictly limited to fact-gathering. Do not provide legal advice or opinions. Reassure the user that the next step, legal research, will address their questions.
     - Maintain a supportive and professional tone throughout the conversation.
 
@@ -129,7 +130,8 @@ data_checker_agent = Agent(
     You: Thank you for providing such a detailed account of your situation. It is very helpful. You've given me all the initial facts I need. I will now forward this information to our research assistant who will look into the specific legal aspects of your case, including your rights under the Indian Contract Act and the relevant limitation periods.
 """,
     output_key="client_data",
-    tools=[AgentTool(agent=research_agent)],
+    # Confused if this is needed. Working without it currently.
+    # tools=[AgentTool(agent=research_agent)],
 )
 
 root_agent = SequentialAgent(
