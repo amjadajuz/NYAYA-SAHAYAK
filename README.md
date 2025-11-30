@@ -6,10 +6,11 @@ An AI-powered legal advocate that helps users understand their rights and provid
 
 ## ✨ Features
 
-- **Sequential Processing:** Utilizes a **Sequential Agent** architecture to break down legal inquiry into distinct steps: fact-gathering, research, and synthesis.
-- **Specialized Research:** Performs deep semantic research using a custom tool integrated with **InLegalBERT** for analysis specific to the Indian legal corpus.
-- **Data Persistence:** Logs the entire conversation history and the agent's full execution trace to a **Supabase** backend.
-- Empathetic and professional responses, providing clear guidance about legal rights and options.
+* **Sequential Processing:** Uses a **Sequential Agent** pipeline to ensure a reliable workflow: Fact Validation → Specialized Research → Synthesis.
+* **Data Validation & Elicitation:** The initial agent (`data_checker_agent`) is designed to **validate user input** and will pause the sequence to prompt the user for missing key facts (like dates, location, parties) before proceeding.
+* **Specialized Legal Analysis (LL-BERT):** Performs deep semantic research using a custom tool integrated with a **Legal Language Model (InLegalBERT)**. This ensures the analysis is highly relevant and accurate to complex Indian legal documents and precedents, surpassing the capabilities of general-purpose LLMs.
+* **Data Persistence & Auditing:** Logs the entire conversation history and the agent's full execution trace to a **Supabase** backend for reliable session recall and auditing.
+* **Empathetic Output:** Provides professional, structured, and compassionate legal guidance.
 
 ***
 
