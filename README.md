@@ -25,7 +25,7 @@ The solution uses a **three-agent sequential pipeline** to ensure reliability an
 
 
 
-[./assets/Project_Architecture_Diagram.png]
+![Architecture](assets/Project_Architecture_Diagram.png)
 
 
 ***
@@ -60,6 +60,5 @@ The solution uses a **three-agent sequential pipeline** to ensure reliability an
 ## ▶️ Running the Application
 
 ### Option 1: Command Line Interface (For Debugging)
-Run the agent logic directly via the pre-configured prompt in `agent.py`:
 ```bash
-python3 agent.py
+streamlit run app.py
