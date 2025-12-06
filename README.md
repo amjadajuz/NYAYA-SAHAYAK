@@ -62,3 +62,8 @@ The solution uses a **three-agent sequential pipeline** to ensure reliability an
 ### Option 1: Command Line Interface (For Debugging)
 ```bash
 streamlit run app.py
+```
+### Sample query:
+```
+I own a small business in Kochi, Kerala. I paid an advance of ₹5,00,000 on 2025-05-15 to a vendor named 'Tech Solutions Pvt. Ltd.' for a custom software package that was supposed to be delivered by 2025-09-30. They have now stopped responding to my emails and calls, and the software is incomplete. The contract has a clause mentioning "force majeure," but there has been no natural disaster or war, only internal management changes at the vendor's side. What are my specific rights under Indian contract law, and what is the typical limitation period for filing a suit for breach of contract in this situation? Please reference any relevant sections of the Indian Contract Act, 1872, or related statutes.
+```
